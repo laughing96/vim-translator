@@ -10,7 +10,12 @@ import copy
 import json
 import argparse
 import codecs
-from gtts import gTTS
+
+try:
+    from gtts import gTTS
+    gTTS_AVAILABLE = True
+except ImportError:
+    gTTS_AVAILABLE = False
 import csv
 
 if sys.version_info.major < 3:
@@ -52,10 +57,8 @@ class BaseTranslator(object):
             header = copy.deepcopy(header)
         else:
             header = {}
-            header["User-Agent"] = (
-                "Mozilla/5.0 (X11; Linux x86_64) \
+            header["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) \
                     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
-            )
 
         if post:
             if data:
@@ -605,13 +608,14 @@ class CustomSave(object):
                 mp3_filename = f"hypertts-{safe_name}.mp3"
                 mp3_path = os.path.join(self.anki_media_dir, mp3_filename)
 
-                tts = gTTS(text=data.get("source"), lang="en")
-                tts.save(mp3_path)
-                audio_file = f"[sound:{mp3_filename}]"
-                data["audio"] = audio_file
+                if gTTS_AVAILABLE:
+                    tts = gTTS(text=data.get("source"), lang="en")
+                    tts.save(mp3_path)
+                    audio_file = f"[sound:{mp3_filename}]"
+                    data["audio"] = audio_file
                 break
         self.data = data
-    
+
     def _anki_format(self, items):
         html = []
         for s in items:
@@ -630,26 +634,26 @@ class CustomSave(object):
 
         for item in data:
             line = item.strip()
-            
+
             # 1. 识别词性 (例如 [noun])
             if line.startswith("[") and line.endswith("]"):
                 current_pos = {"pos": line.strip("[]"), "content": []}
                 result.append(current_pos)
-                current_def = None # 换词性了，清空当前定义指针
+                current_def = None  # 换词性了，清空当前定义指针
 
             # 2. 识别定义 (例如 - a number of...)
             elif line.startswith("-"):
                 definition = {"meaning": line.lstrip("- ").strip(), "examples": []}
                 if current_pos:
                     current_pos["content"].append(definition)
-                    current_def = definition # 记录当前定义，方便存入后续例句
+                    current_def = definition  # 记录当前定义，方便存入后续例句
 
             # 3. 识别例句 (例如 * her villa...)
             elif line.startswith("*"):
                 if current_def is not None:
                     current_def["examples"].append(line.lstrip("* ").strip())
 
-        return json.dumps(result,ensure_ascii=False)
+        return json.dumps(result, ensure_ascii=False)
 
     def _update_old_file(self):
         """
@@ -658,17 +662,17 @@ class CustomSave(object):
         """
         rows = []
         # from 0
-        len_col = 6 
+        len_col = 6
         found = False
         if os.path.exists(self.save_word_file):
             with open(self.save_word_file, "r", encoding="utf-8") as f:
                 reader = csv.reader(f, delimiter="\t")
                 for r in reader:
                     if len(r) == len_col and r[0] == self.data.get("source"):
-                        r[1] = self.data['phonetic']
-                        r[2] = self.data['audio']
-                        r[3] = self.data['result']
-                        r[4] = self.data['detail']
+                        r[1] = self.data["phonetic"]
+                        r[2] = self.data["audio"]
+                        r[3] = self.data["result"]
+                        r[4] = self.data["detail"]
                         r[5] = str(int(r[5]) + 1)
                         found = True
                     rows.append(r)

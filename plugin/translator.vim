@@ -11,6 +11,10 @@ if exists('g:loaded_translator')
 endif
 let g:loaded_translator= 1
 
+if has('nvim') && luaeval("pcall(require, 'translator')")
+  lua require('translator').setup()
+endif
+
 let g:translator_history_enable          = get(g:, 'translator_history_enable', v:false)
 let g:translator_proxy_url               = get(g:, 'translator_proxy_url', '')
 let g:translator_source_lang             = get(g:, 'translator_source_lang', 'auto')
